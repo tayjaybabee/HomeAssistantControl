@@ -23,10 +23,10 @@ class ConfigManager:
             self.config_json = json.load(f)
 
     def get(self, key, section='DEFAULT', default=None):
-        # Order of precedence: CLI > Environment > Config File > Config JSON > Default
-        value = getattr(self.cli.parse(), key, None) or \
-                self.env.get(key) or \
-                self.file.get(section, key) or \
-                self.config_json.get(key) or \
-                default
-        return value
+        return (
+            getattr(self.cli.parse(), key, None)
+            or self.env.get(key)
+            or self.file.get(section, key)
+            or self.config_json.get(key)
+            or default
+        )
