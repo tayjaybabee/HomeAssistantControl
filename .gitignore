@@ -450,3 +450,11 @@ dmypy.json
 .pyre/
 .pytype/
 cython_debug/
+/.idea/.gitignore
+/.idea/easycode/codebase-v2.xml
+/.idea/HomeAssistantControl.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/poetry.lock
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/inspectionProfiles/Project_Default.xml
