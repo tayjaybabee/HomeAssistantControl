@@ -14,6 +14,11 @@ from home_assistant_control.utils.cache import Publisher, Subscriber
 
 from home_assistant_control.entities.categories import Categories, Category
 
+from home_assistant_control.log_engine import LOG_DEVICE, Loggable
+
+
+LOGGER = LOG_DEVICE.get_child('entities')
+
 
 class Entity:
     """
@@ -39,9 +44,24 @@ class Entity:
         self.__entity_data = entity_data
         self.__category, self.__name = self.get_category_and_name(self.__entity_id)
 
+        self.__controller = None
+
     @property
     def client(self):
         return self.__client
+
+    @property
+    def controller(self):
+        return self.__controller
+
+    @controller.setter
+    def controller(self, new):
+        from home_assistant_control.controllers import Controller
+
+        if not isinstance(new, Controller):
+            raise TypeError('`controller` must be a Controller instance!')
+
+        self.__controller = new
 
     @staticmethod
     def get_category_and_name(entity_id: str) -> list[str]:

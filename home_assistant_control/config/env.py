@@ -1,6 +1,9 @@
 import os
 
 
+# OopCompanion:suppressRename
+
+
 class ConfigEnv:
 
     @staticmethod

@@ -1,7 +1,11 @@
 from home_assistant_control.controllers import Controller, Payload
 from home_assistant_control.controllers.lights.maps import COLORS
-from home_assistant_control.utils.api import make_request
 from home_assistant_control.utils import get_headers
+
+from home_assistant_control.controllers import LOGGER as LOG_DEVICE
+
+
+LOGGER = LOG_DEVICE.get_child('lights')
 
 
 class LightPayload(Payload):
@@ -9,9 +13,9 @@ class LightPayload(Payload):
     A subclass of Payload for creating light-specific payloads.
 
     Usage example:
-    >>> payload = LightPayload('light.living_room', 'red', 255)
+    >>> payload = LightPayload('living_room')
     >>> print(payload.get_payload())
-    {'entity_id': 'light.living_room', 'rgb_color': [255, 0, 0], 'brightness': 255}
+    {'entity_id': 'light.living_room'}
     """
 
     ENDPOINT = 'services'
@@ -22,29 +26,49 @@ class LightPayload(Payload):
 
         Args:
             entity_name (str): The name of the entity.
-            color (str): The color to set.
-            brightness (int): The brightness level.
         """
-        self.__entity_name = entity_name.lower()
-        self.__entity_id = f'light.{self.entity_name}'
-        super().__init__(self.entity_id)
+        super().__init__(f'light.{entity_name}')
 
-    @property
-    def entity_name(self):
-        return self.__entity_name
-
-    @property
-    def entity_id(self):
-        return self.__entity_id
-
-    def get_payload(self) -> dict:
+    def set_color(self, color_name: str):
         """
-        Generates the payload dictionary specific to lights.
+        Sets the color of the light.
 
-        Returns:
-            dict: The light-specific payload dictionary.
+        Args:
+            color_name (str): The name of the color.
+
+        Usage example:
+        >>> payload = LightPayload('living_room')
+        >>> payload.set_color('blue')
         """
-        return super().get_payload()
+        log = self.log_device.logger
+        log.debug(f'Setting color: {color_name}')
+        color_name = color_name.lower()
+        if color_name in COLORS:
+            self.payload['rgb_color'] = COLORS[color_name]
+        else:
+            raise ValueError(f"Unknown color: {color_name}")
+
+        log.debug(f'Payload is now: {self.payload}')
+
+    def set_brightness(self, brightness: int):
+        """
+        Sets the brightness of the light.
+
+        Args:
+            brightness (int): The brightness level (0-255).
+
+        Usage example:
+        >>> payload = LightPayload('living_room')
+        >>> payload.set_brightness(128)
+        """
+        log = self.log_device.logger
+        log.debug(f'Setting brightness: {brightness}')
+        if 0 <= brightness <= 255:
+            self.payload['brightness'] = brightness
+        else:
+            raise ValueError("Brightness must be between 0 and 255")
+
+        log.debug(f'Payload is now: {self.payload}')
 
 
 class LightController(Controller):
@@ -58,71 +82,73 @@ class LightController(Controller):
     SERVICES_STUB = f'/api/services/light/'
     ON_ENDPOINT = f'{SERVICES_STUB}turn_on'
     OFF_ENDPOINT = f'{SERVICES_STUB}turn_off'
+    TOGGLE_ENDPOINT = f'{SERVICES_STUB}toggle'
 
     SERVICE_URL_MAP = {
             'turn_on':  ON_ENDPOINT,
-            'turn_off': OFF_ENDPOINT
+            'turn_off': OFF_ENDPOINT,
+            'toggle': TOGGLE_ENDPOINT,
+            'brightness': ON_ENDPOINT,
             }
 
-    def __init__(self, entity):
+    def __init__(self, entity, **kwargs):
         """
         Initializes a new instance of the LightController class.
 
         Args:
-            client: The Home Assistant client object.
-            category_name (str): The category of the entity (e.g., 'lights').
+            entity (Entity): The entity to control.
         """
-        super().__init__(entity)
+        super().__init__(entity, **kwargs)
 
     @property
     def service_payload(self):
         return LightPayload(self.entity.name)
 
-    def change_light_color(self, entity_name: str, color: str, brightness=255):
-        """
-        Changes the color of a light entity.
+    def change_attributes(self, **kwargs):
+        payload = self.service_payload
+        log = self.log_device.logger
 
-        Args:
-            entity_name (str): The name of the entity.
-            color (str): The color to set.
-            brightness (int): The brightness level.
+        log.debug(f'Received kwargs: {kwargs}')
 
-        Returns:
-            None: Sends the payload using the send_payload method from Controller.
-        """
-        print(entity_name)
-        payload_obj = LightPayload(f'light.{entity_name}')
-        payload = payload_obj.get_payload()
+        # Set color if provided.
+        if 'color' in kwargs:
+            payload.set_color(kwargs['color'])
 
-        # Use the send_payload method from the parent Controller class
-        self.send_payload(payload)
+        # Set brightness if provided.
+        if 'brightness' in kwargs:
+            payload.set_brightness(kwargs['brightness'])
+
+        return self.call_service('turn_on', payload=payload.payload)
 
     def get_state(self):
         return self.get_entity_state()['state']
 
-    def _post(self, url, *args):
+    def _post(self, url, data):
         headers = get_headers(self.client.token)
+        print(headers)
 
-        return super()._post(url, headers=headers, json=data)
+        return super()._post(url, headers=headers, data=data)
 
     def get_endpoint_url(self, service):
         ep = self.SERVICE_URL_MAP.get(service.lower())
+        print(ep)
         return f'{self.client.url}{ep}'
 
     def turn_on(self):
-        # Assemble the url
-        url = self.get_endpoint_url('turn_on')
-
-        # Assemble the data
-        data = self.service_payload
-
-        # Post the data
-        return self._post(url, data.get_payload())
+        return self.call_service('turn_on')
 
     def turn_off(self):
-        # Assemble the url
-        url = self.get_endpoint_url('turn_off')
+        return self.call_service('turn_off')
 
-        data = LightPayload(self.entity.name)
+    def toggle(self):
+        return self.call_service('toggle')
 
-        return self._post(url, data.get_payload())
+    # TODO Rename this here and in `turn_on`, `turn_off` and `toggle`
+    def call_service(self, service_name, payload=None):
+
+        url = self.get_endpoint_url(service_name.lower())
+        print(url)
+        data = payload or self.service_payload.payload
+        print(data)
+
+        return self._post(url, data)

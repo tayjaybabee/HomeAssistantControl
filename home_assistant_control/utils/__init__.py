@@ -1,6 +1,11 @@
 from urllib.parse import urlparse
 from typing import List
 
+from home_assistant_control.log_engine import LOG_DEVICE
+
+
+LOGGER = LOG_DEVICE.get_child('utils')
+
 
 def format_time(hours: int, minutes: int, seconds: int) -> str:
     """Format time as a human-readable string."""
@@ -38,12 +43,14 @@ def is_valid_url(url: str) -> bool:
         >>> is_valid_url('invalid.url')
         False
     """
-
+    log = LOGGER.get_child()
+    log.logger.debug(f'Validating URL: {url}')
     try:
         result = urlparse(url)
         # Ensure scheme (http, https) and network location are present
         return all([result.scheme, result.netloc])
     except ValueError:
+        log.logger.warning(f'Invalid URL: {url}')
         return False
 
 

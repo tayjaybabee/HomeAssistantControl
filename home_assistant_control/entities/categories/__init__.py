@@ -1,3 +1,11 @@
+import importlib
+
+
+def load_class(module_name, class_name):
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
+
+
 class Category:
 
     def __init__(self, client, category_name: str):
@@ -5,6 +13,7 @@ class Category:
         self.__client = client
 
         self.__entities = client.entities
+        self.__members = self._gather_members()
 
     @property
     def category_name(self) -> str:
@@ -54,7 +63,7 @@ class Category:
         Returns:
             List[Entity]: The members of the category.
         """
-        return self._gather_members()
+        return self.__members
 
     def find_by_name(self, name):
         """
@@ -87,7 +96,7 @@ class Category:
         Returns:
             str: A string representation of the Category object.
         """
-        member_count = len(self._gather_members())
+        member_count = len(self.members)
         return f'<Category name={self.__category_name} member_count={member_count} client={self.__client}>'
 
     def __str__(self) -> str:
@@ -113,9 +122,24 @@ class Categories:
     @property
     def contents(self):
         if self.__contents == {}:
-            for category in self.client.entities.categories:
-                self.__contents[category] = {}
-                self.__contents[category]['object'] = Category(self.client, category)
-                self.__contents[category]['members'] = self.__contents[category]['object']._gather_members()
 
+            for category in self.client.entities.categories:
+                try:
+                    category_class = load_class(
+                        f'home_assistant_control.entities.categories.{category}',
+                        f'{category.title()}Category'
+                    )
+                except (ModuleNotFoundError, AttributeError):
+
+                    category_class = Category
+
+                category_object = category_class(self.client, category)
+
+                self.__contents[category] = {
+                    'object': category_object,
+                    'members': category_object._gather_members()
+                }
         return self.__contents
+
+    def get_member(self, name):
+        return self.contents[name]['members']

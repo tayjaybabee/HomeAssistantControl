@@ -3,6 +3,8 @@ from home_assistant_control.utils import validate_and_transform_url
 from home_assistant_control.utils.api import validate_and_return_token, validate_token
 
 
+
+
 class Client:
 
     def __init__(self, url, token):
