@@ -458,3 +458,7 @@ cython_debug/
 /poetry.lock
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/inspectionProfiles/Project_Default.xml
+/.idea/GitLink.xml
+/.idea/codestream.xml
+/.idea/discord.xml
+/.idea/vcs.xml
