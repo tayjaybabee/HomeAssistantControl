@@ -4,6 +4,8 @@ from home_assistant_control.utils import get_headers
 
 from home_assistant_control.controllers import LOGGER as LOG_DEVICE
 
+# OopCompanion:suppressRename
+
 
 LOGGER = LOG_DEVICE.get_child('lights')
 
@@ -85,9 +87,9 @@ class LightController(Controller):
     TOGGLE_ENDPOINT = f'{SERVICES_STUB}toggle'
 
     SERVICE_URL_MAP = {
-            'turn_on':  ON_ENDPOINT,
-            'turn_off': OFF_ENDPOINT,
-            'toggle': TOGGLE_ENDPOINT,
+            'turn_on':    ON_ENDPOINT,
+            'turn_off':   OFF_ENDPOINT,
+            'toggle':     TOGGLE_ENDPOINT,
             'brightness': ON_ENDPOINT,
             }
 
@@ -102,9 +104,27 @@ class LightController(Controller):
 
     @property
     def service_payload(self):
+        """
+        Returns the payload for the light service.
+
+        Returns:
+            LightPayload: The payload object for the light service.
+
+        Args:
+            self: The instance of the LightController class.
+        """
         return LightPayload(self.entity.name)
 
     def change_attributes(self, **kwargs):
+        """
+        Changes the attributes of the light.
+
+        Returns:
+            None
+
+        Args:
+            self: The instance of the LightController class.
+        """
         payload = self.service_payload
         log = self.log_device.logger
 
@@ -121,29 +141,75 @@ class LightController(Controller):
         return self.call_service('turn_on', payload=payload.payload)
 
     def get_state(self):
+        """
+        Returns the state of the light.
+
+        Returns:
+            str: The state of the light.
+
+        Args:
+            self: The instance of the LightController class.
+        """
         return self.get_entity_state()['state']
 
     def _post(self, url, data):
+        """
+        Overrides the _post method in the Controller class.
+
+        Returns:
+            None
+
+        Args:
+            self: The instance of the LightController class.
+        """
+        log = self.log_device.logger
         headers = get_headers(self.client.token)
-        print(headers)
+
+        log.debug(f'Sending headers: {headers}')
 
         return super()._post(url, headers=headers, data=data)
 
     def get_endpoint_url(self, service):
+        """
+        Returns the endpoint URL for the light service.
+
+        Returns:
+            str: The endpoint URL for the light service.
+
+        Args:
+            self: The instance of the LightController class.
+        """
         ep = self.SERVICE_URL_MAP.get(service.lower())
         print(ep)
         return f'{self.client.url}{ep}'
 
     def turn_on(self):
+        """
+        Turns the light on.
+
+        Returns:
+            None
+
+        Args:
+            self: The instance of the LightController class.
+        """
         return self.call_service('turn_on')
 
     def turn_off(self):
         return self.call_service('turn_off')
 
     def toggle(self):
+        """
+        Toggles the state of the light.
+
+        Returns:
+            None
+
+        Args:
+            self: The instance of the LightController class.
+        """
         return self.call_service('toggle')
 
-    # TODO Rename this here and in `turn_on`, `turn_off` and `toggle`
     def call_service(self, service_name, payload=None):
 
         url = self.get_endpoint_url(service_name.lower())
